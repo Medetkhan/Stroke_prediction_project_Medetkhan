@@ -4,6 +4,7 @@ import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import MinMaxScaler
 import pickle
+import plotly.express as px
 
 st.set_page_config(
     page_title='Stroke_Prediction_App',
@@ -24,6 +25,11 @@ if 'model' not in st.session_state:
 
 if 'encoding_model' not in st.session_state:
      st.session_state['encoding_model'] = None
+
+def reset_session_state():
+    st.session_state['df_input'] = pd.DataFrame()
+    st.session_state['df_predicted'] = pd.DataFrame()
+
 
 # ML section start:
 numerical = ['age', 'hypertension', 'heart_disease', 'avg_glucose_level', 'bmi']
@@ -71,7 +77,7 @@ with st.sidebar:
     tab1, tab2 = st.tabs(["Load file", "Add information manually"])
     with tab1:
         st.header('Load file')
-        uploaded_file = st.file_uploader('Выбрать csv файл', type = ['csv','xlsx'])
+        uploaded_file = st.file_uploader('Выбрать csv файл', type = ['csv','xlsx'], on_change = reset_session_state)
         if uploaded_file is not None:
             treshold = st.slider('Порог вероятности инсульта',0.0, 1.0, 0.5)
             prediction_button = st.button('Предсказать', type ='secondary')
@@ -83,6 +89,7 @@ with st.sidebar:
 
     with tab2:
         st.header('Fill the query')
+        patient_id = st.text_input('id')
     #st.write('Hello world!')
 
 ## sidebar section ends here
@@ -102,6 +109,7 @@ if len(st.session_state['df_input'])>=0:
     else:
         with st.expander('Входные данные'):
             st.write(st.session_state['df_input'])
+st.line_chart(st.session_state['df_input'][['age', 'bmi']])
 
 if len(st.session_state['df_predicted'])>0:
     st.subheader('Результаты прогноза по инсульту')
@@ -113,6 +121,9 @@ if len(st.session_state['df_predicted'])>0:
         file_name = 'df_predicted_stroke.csv',
         mime = 'text/csv',
     )
+
+fig = px.histogram(st.session_state['df_predicted'], x = 'stroke decision', color = 'stroke decision')
+st.plotly_chart(fig, use_container_width = True)
 
 risk_of_stroke = st.session_state['df_predicted'][st.session_state['df_predicted']['stroke decision']==0]
 
