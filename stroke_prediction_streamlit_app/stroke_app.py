@@ -15,6 +15,9 @@ st.set_page_config(
 if 'df_input' not in st.session_state:
      st.session_state['df_input'] = pd.DataFrame()
 
+if 'df_predicted' not in st.session_state:
+    st.session_state['df_predicted'] = pd.DataFrame()
+
 
 if 'model' not in st.session_state:
      st.session_state['model'] = None
@@ -56,7 +59,10 @@ def predict_stroke_minmax(df_input, treshold):
 
 
 
-df_predicted = pd.DataFrame()
+#df_predicted = pd.DataFrame()
+@st.cache_data
+def convert_df(df):
+    return df.to_csv(index=False).encode('utf-8')
 
 #sidebar: 
 with st.sidebar:
@@ -71,7 +77,7 @@ with st.sidebar:
             prediction_button = st.button('Предсказать', type ='secondary')
             st.session_state['df_input'] = pd.read_csv(uploaded_file)
             if prediction_button:
-                 df_predicted = predict_stroke_minmax(st.session_state['df_input'], treshold)
+                 st.session_state['df_predicted'] = predict_stroke_minmax(st.session_state['df_input'], treshold)
             #df = pd.read_csv(uploaded_file)
             #st.write(df)
 
@@ -93,8 +99,15 @@ if len(st.session_state['df_input'])>0:
     st.subheader('Данные из файла')
     st.write(st.session_state['df_input'])
 
-if len(df_predicted)>0:
+if len(st.session_state['df_predicted'])>0:
     st.subheader('Результаты прогноза по инсульту')
-    st.write(df_predicted)
+    st.write(st.session_state['df_predicted'])
+    res_csv = convert_df(st.session_state['df_predicted'])
+    st.download_button(
+        label = 'Download all predictions',
+        data = res_csv,
+        file_name = 'df_predicted_stroke.csv',
+        mime = 'text/csv',
+    )
      
 #st.write('heyyyyy!')
