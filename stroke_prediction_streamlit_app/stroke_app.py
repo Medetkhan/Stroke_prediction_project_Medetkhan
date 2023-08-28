@@ -95,9 +95,13 @@ st.title('Welcome to Stroke Prediction App')
 with st.expander("О проекте"):
     st.write('Данное приложение предсказывает вероятность инсульта у индивидуума. Данные используются из открытых источников. На основе анкетных данных модель предсказывает риск инсульта')
 
-if len(st.session_state['df_input'])>0:
-    st.subheader('Данные из файла')
-    st.write(st.session_state['df_input'])
+if len(st.session_state['df_input'])>=0:
+    if len(st.session_state['df_input'])==0:
+        st.subheader('Данные из файла')
+        st.write(st.session_state['df_input'])
+    else:
+        with st.expander('Входные данные'):
+            st.write(st.session_state['df_input'])
 
 if len(st.session_state['df_predicted'])>0:
     st.subheader('Результаты прогноза по инсульту')
@@ -109,5 +113,19 @@ if len(st.session_state['df_predicted'])>0:
         file_name = 'df_predicted_stroke.csv',
         mime = 'text/csv',
     )
-     
+
+risk_of_stroke = st.session_state['df_predicted'][st.session_state['df_predicted']['stroke decision']==0]
+
+if len(risk_of_stroke) > 1:
+    st.subheader('Люди с высоким риском инсульта')
+    st.write(risk_of_stroke)
+
+    res_risky_csv = convert_df(risk_of_stroke)
+    st.download_button(
+        label = 'Download data with stroke positive predictions',
+        data = res_risky_csv,
+        file_name = 'df_positive_stroke_risk.csv',
+        mime = 'text/csv',
+    )
+
 #st.write('heyyyyy!')
