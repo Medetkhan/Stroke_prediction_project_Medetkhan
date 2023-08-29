@@ -19,6 +19,9 @@ if 'df_input' not in st.session_state:
 if 'df_predicted' not in st.session_state:
     st.session_state['df_predicted'] = pd.DataFrame()
 
+if 'tab_selected' not in st.session_state:
+    st.session_state['tab_selected'] = None
+
 
 if 'model' not in st.session_state:
      st.session_state['model'] = None
@@ -59,8 +62,8 @@ def predict_stroke_minmax(df_input, treshold):
     X = st.session_state['encoding_model'].transform(dict_df)
     y_pred_proba = st.session_state['model'].predict_proba(X)[:,1]
     stroke_decision = (y_pred_proba>=treshold).astype(int)
-    df_original['stroke decision'] = stroke_decision
-    df_original['stroke predicted probability'] = y_pred_proba
+    df_original['stroke_decision'] = stroke_decision
+    df_original['stroke_predicted_probability'] = y_pred_proba
     return df_original
 
 
@@ -76,20 +79,58 @@ with st.sidebar:
 
     tab1, tab2 = st.tabs(["Load file", "Add information manually"])
     with tab1:
+        
         st.header('Load file')
         uploaded_file = st.file_uploader('Выбрать csv файл', type = ['csv','xlsx'], on_change = reset_session_state)
         if uploaded_file is not None:
-            treshold = st.slider('Порог вероятности инсульта',0.0, 1.0, 0.5)
+            treshold = st.slider('Порог вероятности инсульта',0.0, 1.0, 0.5, key='slider1')
             prediction_button = st.button('Предсказать', type ='secondary')
             st.session_state['df_input'] = pd.read_csv(uploaded_file)
             if prediction_button:
                  st.session_state['df_predicted'] = predict_stroke_minmax(st.session_state['df_input'], treshold)
+                 st.session_state['tab_selected'] = 'tab1'
             #df = pd.read_csv(uploaded_file)
             #st.write(df)
 
     with tab2:
+        
         st.header('Fill the query')
-        patient_id = st.text_input('id')
+        patient_id = st.text_input('id', placeholder = '000000', help = 'Введите ID')
+        gender = st.selectbox('Gender', ('female','male'))
+        age = st.text_input('age', '00')
+        hypertension = st.selectbox('hypertension', ('0','1'), help = 'гипертония если есть то нажмите 1, в противном случае 0')
+        heart_disease = st.selectbox('heart disease', ('0','1'), help = 'Имеются ли болезни сердца')
+        ever_married = st.selectbox('marriage status', ('yes', 'no'))
+        work_type = st.selectbox('work type', ('private', 'self employed', 'govt job'))
+        residence_type = st.selectbox('residence type', ('urban', 'rural'))
+        avg_glucose_level = st.text_input('average glucose level', placeholder = '000.00', help = 'уровень глюкозы')
+        bmi = st.text_input('bmi', placeholder = '00.00')
+        smoking_status = st.selectbox('smoking status', ('formerly smoked', 'never smoked', 'smokes'))
+
+        if patient_id !='':
+            treshold = st.slider('Порог вероятности инсульта', 0.0, 1.0, 0.5, key='slider2')
+            prediction_button_tab2 = st.button('Предсказать', type ='primary', use_container_width=True, key = 'button2')
+
+            if prediction_button_tab2:
+                st.session_state['tab_selected'] = 'tab2'
+                st.session_state['df_input']= pd.DataFrame({
+                    'patient_id': patient_id,
+                    'gender': gender,
+                    'age': age,
+                    'hypertension': hypertension,
+                    'heart_disease': heart_disease,
+                    'ever_married': ever_married,
+                    'work_type': work_type,
+                    'residence_type': residence_type,
+                    'avg_glucose_level': avg_glucose_level,
+                    'bmi': bmi,
+                    'smoking_status': smoking_status
+                }, index=[0]) #index=[0] 
+                st.session_state['df_predicted'] = predict_stroke_minmax(st.session_state['df_input'], treshold)
+
+
+
+
     #st.write('Hello world!')
 
 ## sidebar section ends here
@@ -109,9 +150,16 @@ if len(st.session_state['df_input'])>=0:
     else:
         with st.expander('Входные данные'):
             st.write(st.session_state['df_input'])
-st.line_chart(st.session_state['df_input'][['age', 'bmi']])
+    #st.line_chart(st.session_state['df_input'][['age', 'bmi']])
 
-if len(st.session_state['df_predicted'])>0:
+if len(st.session_state['df_predicted'])>0 and st.session_state['tab_selected']=='tab2':
+    if st.session_state['df_predicted']['stroke_decision'][0]==0:
+        st.subheader(f"has :blue[no] stroke risks with following probabilty {(1-st.session_state['df_predicted']['stroke_predicted_probability'][0])*100:.2f}%")
+    else:
+        st.subheader(f"Has :red[some] stroke risks with following probability {(st.session_state['df_predicted']['stroke_predicted_probability'][0])*100:.2f}%")
+
+
+if len(st.session_state['df_predicted'])>0 and st.session_state['tab_selected']=='tab1':
     st.subheader('Результаты прогноза по инсульту')
     st.write(st.session_state['df_predicted'])
     res_csv = convert_df(st.session_state['df_predicted'])
@@ -122,21 +170,21 @@ if len(st.session_state['df_predicted'])>0:
         mime = 'text/csv',
     )
 
-fig = px.histogram(st.session_state['df_predicted'], x = 'stroke decision', color = 'stroke decision')
-st.plotly_chart(fig, use_container_width = True)
+    #fig = px.histogram(st.session_state['df_predicted'], x = 'stroke decision', color = 'stroke decision')
+    #st.plotly_chart(fig, use_container_width = True)
 
-risk_of_stroke = st.session_state['df_predicted'][st.session_state['df_predicted']['stroke decision']==0]
+    risk_of_stroke = st.session_state['df_predicted'][st.session_state['df_predicted']['stroke_decision']==0]
 
-if len(risk_of_stroke) > 1:
-    st.subheader('Люди с высоким риском инсульта')
-    st.write(risk_of_stroke)
+    if len(risk_of_stroke) > 1:
+        st.subheader('Люди с высоким риском инсульта')
+        st.write(risk_of_stroke)
 
-    res_risky_csv = convert_df(risk_of_stroke)
-    st.download_button(
-        label = 'Download data with stroke positive predictions',
-        data = res_risky_csv,
-        file_name = 'df_positive_stroke_risk.csv',
-        mime = 'text/csv',
-    )
+        res_risky_csv = convert_df(risk_of_stroke)
+        st.download_button(
+            label = 'Download data with stroke positive predictions',
+            data = res_risky_csv,
+            file_name = 'df_positive_stroke_risk.csv',
+            mime = 'text/csv',
+        )
 
 #st.write('heyyyyy!')
