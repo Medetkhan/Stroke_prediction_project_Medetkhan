@@ -1,4 +1,7 @@
-streamlit
-matplotlib
-seaborn
+flask
+#scikit-learn==1.2.2
 scikit-learn
+pandas
+ipykernel
+streamlit
+waitress
